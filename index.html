@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>node test</title>
+    
+    <link href='http://fonts.googleapis.com/css?family=Terminal+Dosis+Light' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="style.css"/>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="jquery-1.6.4.min.js"></script>
+    <script>
+      $(function() {
+        
+        var cookieName = getCookie('chatName');
+        var socket;
+        if (cookieName) {
+          socket = io.connect('http://10.0.0.182?name=' + encodeURIComponent(cookieName));
+        }
+        else {
+          socket = io.connect('http://10.0.0.182');
+        }
+        
+        var $messages = $('#messages');
+        var $input = $("#input");
+      
+        socket.on('update', function(data) {
+          postMessage(data.msg, 'chatMessage');
+        });
+        
+        socket.on('update-system', function(data) {
+          postMessage(data.msg, 'systemMessage');
+        });
+        
+        function postMessage(msg, cssClass) {
+            
+          var scrolledToBottom = isScrolledToBottom($messages);
+            
+          var $newMessage = $('<div class="message ' + cssClass + '">');
+          $newMessage.text(msg);
+          $messages.append($newMessage);
+          
+          if (scrolledToBottom) {
+            $messages[0].scrollTop = $messages[0].scrollHeight - $messages.height();
+          }
+          else {
+            $('#messages').addClass('scrollNeeded');
+          }
+        }
+        
+        function isScrolledToBottom($elem) {
+          return $elem[0].scrollTop + $elem.height() === $elem[0].scrollHeight;
+        }
+        
+        socket.on('setName', function(data) {
+          $("#name").val(data.name);
+        });
+          
+        $("#messages").scroll(function() {
+          if (isScrolledToBottom($messages)) {
+            $(this).removeClass('scrollNeeded');
+          }
+        });
+          
+        $("#controls").submit(function(e) {
+          socket.emit('create', {msg:$input.val()});
+          $input.val('').focus();
+          e.preventDefault();
+        });
+        
+        var name = getCookie('chatName');
+        
+        $("#name").change(function() {
+          var name = $(this).val();
+          
+          socket.emit('rename', {name:name});
+          
+          var cookieExpiration = new Date();
+          cookieExpiration.setDate(cookieExpiration.getDate() + 7);
+          document.cookie = 'chatName=' + name + ';expires=' + cookieExpiration.toUTCString();
+        });
+        
+        function getCookie(name) {
+          var nameEQ = name + "=";
+          var ca = document.cookie.split(';');
+          for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') {
+              c = c.substring(1,c.length);
+            }
+            if (c.indexOf(nameEQ) == 0) {
+              return c.substring(nameEQ.length,c.length);
+            }
+          }
+          return null;
+        }
+          
+      });
+    </script>
+  </head>
+  <body>
+    <article>
+      <h1>Node Test</h1>
+      <div>
+        My name is <input id="name"/>
+      </div>
+      <div id="messages"></div>
+      <form id="controls">
+        <input id="input" placeholder="type here"/>
+        <input id="submit" type="submit" value="send"/>
+      </div>
+    </article>
+  </body>
+</html>
