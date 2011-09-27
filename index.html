@@ -11,6 +11,7 @@
     <script>
       $(function() {
         
+        // Connect to socket, providing our preferred user name from cookie
         var cookieName = getCookie('chatName');
         var socket;
         if (cookieName) {
@@ -23,22 +24,26 @@
         var $messages = $('#messages');
         var $input = $("#input");
       
+        // We got a chat from another use
         socket.on('update', function(data) {
-          postMessage(data.msg, 'chatMessage');
+          showMessage(data.msg, 'chatMessage');
         });
         
+        // We got a system message
         socket.on('update-system', function(data) {
-          postMessage(data.msg, 'systemMessage');
+          showMessage(data.msg, 'systemMessage');
         });
         
-        function postMessage(msg, cssClass) {
+        // Update the message view with new content 
+        function showMessage(msg, cssClass) {
             
           var scrolledToBottom = isScrolledToBottom($messages);
             
           var $newMessage = $('<div class="message ' + cssClass + '">');
           $newMessage.text(msg);
           $messages.append($newMessage);
-          
+
+          // Show a special style if scrolled up when new messages come in
           if (scrolledToBottom) {
             $messages[0].scrollTop = $messages[0].scrollHeight - $messages.height();
           }
@@ -51,16 +56,19 @@
           return $elem[0].scrollTop + $elem.height() === $elem[0].scrollHeight;
         }
         
+        // Server in charge of what our name really is
         socket.on('setName', function(data) {
           $("#name").val(data.name);
         });
           
+        // If you scroll to the bottom of the messages, set style to normal
         $("#messages").scroll(function() {
           if (isScrolledToBottom($messages)) {
             $(this).removeClass('scrollNeeded');
           }
         });
-          
+        
+        // Send a chat message
         $("#controls").submit(function(e) {
           socket.emit('create', {msg:$input.val()});
           $input.val('').focus();
@@ -69,6 +77,7 @@
         
         var name = getCookie('chatName');
         
+        // Request a new name
         $("#name").change(function() {
           var name = $(this).val();
           
@@ -79,6 +88,7 @@
           document.cookie = 'chatName=' + name + ';expires=' + cookieExpiration.toUTCString();
         });
         
+        // How to set a cookie in JavaScript
         function getCookie(name) {
           var nameEQ = name + "=";
           var ca = document.cookie.split(';');
